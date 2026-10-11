@@ -1,0 +1,64 @@
+# Auralis - local/production compose file.
+#
+# Deliberately does NOT bake ML model weights into images (Whisper, Silero
+# VAD, the emotion model, and especially XTTS are hundreds of MB to
+# multiple GB). Instead they download into named volumes on first startup
+# and are cached for every run after that. See README "Deployment".
+#
+# Ollama runs as its own service so the LLM is swappable/independently
+# scalable from the audio pipeline.
+
+version: "3.9"
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - LLM_MODEL=${LLM_MODEL:-llama3}
+      - WHISPER_MODEL=${WHISPER_MODEL:-base}
+      - WHISPER_DEVICE=${WHISPER_DEVICE:-cpu}
+      - EMOTION_MODEL=${EMOTION_MODEL:-ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition}
+      - TTS_ENGINE=${TTS_ENGINE:-xtts}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:5173}
+    volumes:
+      - model_cache:/root/.cache          # Whisper/HF/torch hub model cache
+      - ./models:/app/models              # your speaker_reference.wav etc.
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    # Uncomment if you have an NVIDIA GPU + nvidia-container-toolkit installed:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:8000}
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+  model_cache:

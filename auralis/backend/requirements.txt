@@ -1,0 +1,27 @@
+# --- Web framework / real-time transport ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-dotenv==1.0.1
+aiortc==1.9.0
+av==12.3.0
+
+# --- Core numerics / audio ---
+numpy==1.26.4
+
+# --- STT ---
+faster-whisper==1.0.3
+
+# --- VAD (Silero, loaded via torch.hub) + Emotion (Wav2Vec2) ---
+torch==2.3.1
+torchaudio==2.3.1
+transformers==4.44.2
+
+# --- TTS (Coqui TTS, provides XTTSv2). Bark is optional, see README ---
+TTS==0.22.0
+
+# --- LLM client (Ollama over HTTP) ---
+requests==2.32.3
+
+# --- Testing ---
+pytest==8.3.2
+pytest-asyncio==0.24.0
